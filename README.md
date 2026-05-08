@@ -29,8 +29,8 @@
 - [Tested Environment](#desktop_computer-tested-environment)
 - [Install](#keyboard-install)
 - [Quickstart](#zap-quickstart)
-- [Training and Evaluation](#dart-training-and-evaluation-glue-factory-branch)
-- [Visualization with hloc](#magic_wand-visualization-and-evaluation-hloc-branch)
+- [Training and Evaluation (coming soon)](#dart-training-and-evaluation-glue-factory-branch-coming-soon)
+- [Visualization with hloc (coming soon)](#magic_wand-visualization-and-evaluation-hloc-branch-coming-soon)
 - [FAQ](#question-faq)
 - [To Do](#clipboard-to-do)
 - [Citation](#memo-citation)
@@ -38,10 +38,12 @@
 
 
 ## MambaGlue :snake:
-The `main` branch contains the standard MambaGlue model and inference utilities. Thanks to [CVG Lab](https://cvg.ethz.ch/), training, evaluation, and SfM/visual-localization workflows are provided on dedicated branches:
+The `main` branch contains the standard MambaGlue model and inference utilities. Training, evaluation, and SfM/visual-localization workflows will be provided on two dedicated branches, built on top of [CVG Lab](https://cvg.ethz.ch/)'s codebases:
 
-- [glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory): training and benchmark evaluation (built on [Glue Factory](https://github.com/cvg/glue-factory))
-- [hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc): SfM and visual localization (built on [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/))
+- `glue-factory` *(coming soon)*: training and benchmark evaluation, built on [Glue Factory](https://github.com/cvg/glue-factory)
+- `hloc` *(coming soon)*: SfM and visual localization, built on [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/)
+
+> **Note:** the `glue-factory` and `hloc` branches are not yet pushed to this repository. Until they are, the `main` branch only supports *inference* with released weights — training is not yet reproducible from this repo on its own. See [`#8`](https://github.com/url-kaist/MambaGlue/issues/8).
 
 
 ## :desktop_computer: Tested Environment
@@ -96,14 +98,16 @@ points1 = feats1["keypoints"][matches[..., 1]]       # matched keypoints in imag
 Supported front-end extractors: `superpoint`, `disk`, `aliked`, `sift` (passed via the `features=` argument). To visualize matches, see `mambaglue.viz2d`.
 
 
-## :dart: Training and Evaluation ([glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory))
-Use [Glue Factory](https://github.com/cvg/glue-factory) to train MambaGlue on top of any local feature extractor with your own or open-sourced datasets. A single training run takes roughly one week.
+## :dart: Training and Evaluation (`glue-factory` branch, coming soon)
+> :warning: **The `glue-factory` branch has not been pushed yet.** Tracked in the To-Do below.
 
-The `glue-factory` branch also contains evaluation scripts for HPatches and MegaDepth, so you can reproduce comparisons against baseline matchers. See the branch README for the exact commands and config files.
+When released, the branch will provide a [Glue Factory](https://github.com/cvg/glue-factory) integration to train MambaGlue on any local feature extractor and to benchmark on HPatches and MegaDepth. A single training run takes roughly one week. Configs and exact commands will live on the branch's README. Until then, training is not reproducible from this repo on its own.
 
 
-## :magic_wand: Visualization and Evaluation ([hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc))
-Use [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/) with MambaGlue as the matcher to run Structure-from-Motion and visual localization end-to-end.
+## :magic_wand: Visualization and Evaluation (`hloc` branch, coming soon)
+> :warning: **The `hloc` branch has not been pushed yet.** Tracked in the To-Do below.
+
+When released, the branch will integrate MambaGlue as a matcher in [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/) for end-to-end Structure-from-Motion and visual localization.
 
 
 ## :question: FAQ
@@ -112,7 +116,7 @@ Use [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization
 The weight currently published is a pre-publication version, and the runtime environment used for the paper differs from a fresh install. To match the numbers reported in the paper, train from scratch on your target front-end and tune the inference hyperparameters (e.g. `filter_threshold`, `depth_confidence`, `width_confidence`) on a held-out split.
 
 **Q. How is MambaGlue trained?** ([#8](https://github.com/url-kaist/MambaGlue/issues/8))<br>
-Training lives on the [`glue-factory`](https://github.com/url-kaist/MambaGlue/tree/glue-factory) branch, not on `main`. The matcher is registered with Glue Factory the same way LightGlue is, so the standard Glue Factory training and evaluation entry points apply. Like SuperGlue and LightGlue, training is two-staged: first the correspondence head, then the confidence regressor used for point pruning.
+Training is **not** reproducible from this repository at the moment — the `glue-factory` branch where the training pipeline lives has not yet been pushed (tracked in the To-Do below). When it is released, MambaGlue will plug into [Glue Factory](https://github.com/cvg/glue-factory) the same way LightGlue does, with the standard two-stage protocol used by SuperGlue/LightGlue (correspondence head first, then the confidence regressor used for point pruning). Dropping `mambaglue.py` into an upstream Glue Factory checkout is not a valid substitute, since the branch contains additional configs and registration glue that have not been released yet.
 
 **Q. Does MambaGlue support point pruning?** ([#5](https://github.com/url-kaist/MambaGlue/issues/5))<br>
 Yes. It is enabled with the `width_confidence` and `depth_confidence` config keys (set to a positive value to activate, `-1` to disable), the same convention as LightGlue. Pruning is auto-skipped on CPU and on small keypoint counts, where the gather overhead outweighs the savings.
@@ -122,9 +126,10 @@ Mamba's selective-scan CUDA kernels do not build on macOS. Use the provided Dock
 
 
 ## :clipboard: To Do
+- [ ] **Push the `glue-factory` branch** (training and benchmark code)
+- [ ] **Push the `hloc` branch** (SfM/visual-localization integration)
+- [ ] Push the published-version checkpoint (currently the released weight is a pre-publication version, see [#6](https://github.com/url-kaist/MambaGlue/issues/6))
 - [ ] Release demo code (notebook)
-- [ ] Push the published-version checkpoint
-- [ ] Update branches in lockstep with `main`
 - [ ] ONNX export
 
 
