@@ -7,8 +7,16 @@
     ·
     <a href="https://scholar.google.com/citations?user=NrWfJ1gAAAAJ&hl=ko&oi=ao">Hyun Myung</a>
   </p>
-
 </p>
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2502.00462"><img src="https://img.shields.io/badge/arXiv-2502.00462-b31b1b.svg" alt="arXiv"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c?logo=pytorch&logoColor=white" alt="PyTorch">
+  <a href="https://hub.docker.com/r/rkh137/glue"><img src="https://img.shields.io/badge/Docker-rkh137%2Fglue-2496ed?logo=docker&logoColor=white" alt="Docker"></a>
+</p>
+
 <p align="center">
     <img src="assets/Visualization.png" alt="example" width=40%><img src=assets/demo_sacre.gif alt="animated" width="40%"/></a>
     <br>
@@ -16,48 +24,113 @@
 </p>
 
 
+## :open_book: Table of Contents
+- [Overview](#mambaglue-snake)
+- [Tested Environment](#desktop_computer-tested-environment)
+- [Install](#keyboard-install)
+- [Quickstart](#zap-quickstart)
+- [Training and Evaluation](#dart-training-and-evaluation-glue-factory-branch)
+- [Visualization with hloc](#magic_wand-visualization-and-evaluation-hloc-branch)
+- [FAQ](#question-faq)
+- [To Do](#clipboard-to-do)
+- [Citation](#memo-citation)
+- [License](#license)
+
+
 ## MambaGlue :snake:
-Main branch includes the standard MambaGlue model.
-Thanks to [CVG Lab](https://cvg.ethz.ch/), you can easily train and evaluate the model and visualize the results on [glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory) and [hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc).
+The `main` branch contains the standard MambaGlue model and inference utilities. Thanks to [CVG Lab](https://cvg.ethz.ch/), training, evaluation, and SfM/visual-localization workflows are provided on dedicated branches:
 
-
-## :dart: Training and Evaluation ([glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory))
-Using [Glue Factory](https://github.com/cvg/glue-factory), set MambaGlue for a matcher model and train MambaGlue with any local features on your own or open-sourced dataset! It will take about 1 week for one trial.
-Additionally, you can evaluate its performance compared with other baseline models on benchmarks such as HPatches and MegaDepth.
-
-
-## :magic_wand: Visualization and Evaluation ([hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc))
-Using [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/), set MambaGlue for a matcher model and run MambaGlue for Structure-from-Motion and visual localization!
+- [glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory): training and benchmark evaluation (built on [Glue Factory](https://github.com/cvg/glue-factory))
+- [hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc): SfM and visual localization (built on [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/))
 
 
 ## :desktop_computer: Tested Environment
-- Linux (UBUNTU 20.04)
-- NVIDIA GPU (TITAN V || RTX 3080 || other Ampere architectures)
-- CUDA 11.8
-- CUDNN 8
+- Linux (Ubuntu 20.04)
+- NVIDIA GPU (TITAN V, RTX 3080, or other Ampere/newer architectures)
+- CUDA 11.8 + cuDNN 8
 - PyTorch 2.1.0
-- Python 3.8
+- Python 3.10+ (3.8 is end-of-life and no longer supported)
 
 
 ## :keyboard: Install
-Install MambaGlue:
+Mamba's selective-scan kernels must be built first, then install MambaGlue itself:
+
 ```bash
+# 1) Install Mamba (state-spaces/mamba)
 git clone https://github.com/state-spaces/mamba && cd mamba
 pip install .
 cd ..
+
+# 2) Install MambaGlue
 git clone https://github.com/url-kaist/MambaGlue.git && cd MambaGlue
 python -m pip install -e .
 ```
-You can set up the environment starting from [our docker image](https://hub.docker.com/r/rkh137/glue) or [PyTorch official docker image](https://hub.docker.com/layers/pytorch/pytorch/2.1.0-cuda11.8-cudnn8-devel/images/sha256-558b78b9a624969d54af2f13bf03fbad27907dbb6f09973ef4415d6ea24c80d9).
+
+To skip CUDA/toolchain headaches, start from a known-good environment:
+- [Our Docker image (`rkh137/glue`)](https://hub.docker.com/r/rkh137/glue)
+- [PyTorch official image (`pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel`)](https://hub.docker.com/layers/pytorch/pytorch/2.1.0-cuda11.8-cudnn8-devel/images/sha256-558b78b9a624969d54af2f13bf03fbad27907dbb6f09973ef4415d6ea24c80d9)
+
+
+## :zap: Quickstart
+The inference API mirrors LightGlue's, so existing LightGlue pipelines drop in with a one-line swap of the matcher.
+
+```python
+import torch
+from mambaglue import MambaGlue, SuperPoint, match_pair
+from mambaglue.utils import load_image
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+extractor = SuperPoint(max_num_keypoints=2048).eval().to(device)
+matcher   = MambaGlue(features="superpoint").eval().to(device)
+
+image0 = load_image("path/to/image0.jpg").to(device)
+image1 = load_image("path/to/image1.jpg").to(device)
+
+feats0, feats1, matches01 = match_pair(extractor, matcher, image0, image1)
+matches = matches01["matches"]                       # indices into kpts0/kpts1
+points0 = feats0["keypoints"][matches[..., 0]]       # matched keypoints in image0
+points1 = feats1["keypoints"][matches[..., 1]]       # matched keypoints in image1
+```
+
+Supported front-end extractors: `superpoint`, `disk`, `aliked`, `sift` (passed via the `features=` argument). To visualize matches, see `mambaglue.viz2d`.
+
+
+## :dart: Training and Evaluation ([glue-factory branch](https://github.com/url-kaist/MambaGlue/tree/glue-factory))
+Use [Glue Factory](https://github.com/cvg/glue-factory) to train MambaGlue on top of any local feature extractor with your own or open-sourced datasets. A single training run takes roughly one week.
+
+The `glue-factory` branch also contains evaluation scripts for HPatches and MegaDepth, so you can reproduce comparisons against baseline matchers. See the branch README for the exact commands and config files.
+
+
+## :magic_wand: Visualization and Evaluation ([hloc branch](https://github.com/url-kaist/MambaGlue/tree/hloc))
+Use [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization/) with MambaGlue as the matcher to run Structure-from-Motion and visual localization end-to-end.
+
+
+## :question: FAQ
+
+**Q. The released checkpoint scores below LightGlue on MegaDepth1500. Is the weight wrong?** ([#6](https://github.com/url-kaist/MambaGlue/issues/6))<br>
+The weight currently published is a pre-publication version, and the runtime environment used for the paper differs from a fresh install. To match the numbers reported in the paper, train from scratch on your target front-end and tune the inference hyperparameters (e.g. `filter_threshold`, `depth_confidence`, `width_confidence`) on a held-out split.
+
+**Q. How is MambaGlue trained?** ([#8](https://github.com/url-kaist/MambaGlue/issues/8))<br>
+Training lives on the [`glue-factory`](https://github.com/url-kaist/MambaGlue/tree/glue-factory) branch, not on `main`. The matcher is registered with Glue Factory the same way LightGlue is, so the standard Glue Factory training and evaluation entry points apply. Like SuperGlue and LightGlue, training is two-staged: first the correspondence head, then the confidence regressor used for point pruning.
+
+**Q. Does MambaGlue support point pruning?** ([#5](https://github.com/url-kaist/MambaGlue/issues/5))<br>
+Yes. It is enabled with the `width_confidence` and `depth_confidence` config keys (set to a positive value to activate, `-1` to disable), the same convention as LightGlue. Pruning is auto-skipped on CPU and on small keypoint counts, where the gather overhead outweighs the savings.
+
+**Q. Why does `pip install` fail to build Mamba on macOS?**<br>
+Mamba's selective-scan CUDA kernels do not build on macOS. Use the provided Docker image or a Linux machine with a CUDA toolchain.
 
 
 ## :clipboard: To Do
-- [ ] Release demo code
-- [ ] Update branches
-- [ ] ONNX
+- [ ] Release demo code (notebook)
+- [ ] Push the published-version checkpoint
+- [ ] Update branches in lockstep with `main`
+- [ ] ONNX export
+
 
 ## :memo: Citation
-```
+If MambaGlue is useful for your research, please cite:
+```bibtex
 @article{ryoo2025mambaglue,
   title={{MambaGlue: Fast and Robust Local Feature Matching With Mamba}},
   author={Ryoo, Kihwan and
@@ -68,5 +141,6 @@ You can set up the environment starting from [our docker image](https://hub.dock
 }
 ```
 
+
 ## License
-The MambaGlue code provided in this repository is released under the [Apache-2.0 license](./LICENSE).
+The MambaGlue code in this repository is released under the [Apache-2.0 license](./LICENSE).
